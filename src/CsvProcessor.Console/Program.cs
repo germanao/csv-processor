@@ -1,6 +1,8 @@
 using System.Text.Json;
 using CsvProcessor.Core.Processing;
 
+// TODO(CONSOLE-01): Add robust argument parsing, file-existence checks, and user-friendly error messages.
+// TODO(CONSOLE-02): Decide whether invalid rows should produce a non-zero exit code or only processing failures should.
 if (args.Length == 0)
 {
     Console.Error.WriteLine("Usage: dotnet run --project src/CsvProcessor.Console -- <path-to-csv> [previous-watermark]");

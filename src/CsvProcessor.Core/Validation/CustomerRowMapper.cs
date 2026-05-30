@@ -1,6 +1,4 @@
 using System.Globalization;
-using System.Security.Cryptography;
-using System.Text;
 using CsvProcessor.Core.Models;
 
 namespace CsvProcessor.Core.Validation;
@@ -9,45 +7,39 @@ public sealed class CustomerRowMapper
 {
     public RowMappingResult Map(RawCsvRow row)
     {
-        var reasons = new List<string>();
-        var id = NormalizeId(row.Get("customer_id"));
-        var email = NormalizeEmail(row.Get("email"));
-        var fullName = NormalizeName(row.Get("full_name"));
-        var status = ParseStatus(row.Get("status"));
+        // TODO(MAP-01): Normalize all text fields before validation.
+        // TODO(MAP-02): Validate required fields and accumulate every failure in a deterministic order.
+        // TODO(MAP-03): Parse DateOnly and DateTimeOffset using CultureInfo.InvariantCulture.
+        // TODO(MAP-04): Parse balances with clear currency/decimal rules.
+        // TODO(MAP-05): Map legacy statuses like A/I/S/1/0 into CustomerStatus.
+        // TODO(MAP-06): Generate a stable SourceRowHash from canonical source values.
+        var id = row.Get("customer_id").Trim();
+        var email = row.Get("email").Trim().ToLowerInvariant();
 
-        if (string.IsNullOrWhiteSpace(id)) reasons.Add("customer_id is required");
-        if (string.IsNullOrWhiteSpace(email) || !email.Contains('@', StringComparison.Ordinal)) reasons.Add("email is invalid");
-        if (string.IsNullOrWhiteSpace(fullName)) reasons.Add("full_name is required");
-        if (!DateOnly.TryParse(row.Get("date_of_birth"), CultureInfo.InvariantCulture, DateTimeStyles.None, out var dateOfBirth)) reasons.Add("date_of_birth is invalid");
-        if (!decimal.TryParse(row.Get("balance"), NumberStyles.Number | NumberStyles.AllowCurrencySymbol, CultureInfo.InvariantCulture, out var balance)) reasons.Add("balance is invalid");
-        if (status == CustomerStatus.Unknown) reasons.Add("status is invalid");
-        if (!DateTimeOffset.TryParse(row.Get("updated_at"), CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var updatedAt)) reasons.Add("updated_at is invalid");
-
-        if (reasons.Count > 0)
+        if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(email))
         {
-            return RowMappingResult.Invalid(new InvalidRow(row.RowNumber, string.Join("; ", reasons), row.Values));
+            return RowMappingResult.Invalid(new InvalidRow(row.RowNumber, "customer_id and email are required", row.Values));
         }
 
-        var record = new CustomerRecord(id, email, fullName, dateOfBirth, balance, status, updatedAt.ToUniversalTime(), Hash(row.Values));
+        // MOCK/INCOMPLETE ON PURPOSE:
+        // - Email validation only checks for '@'.
+        // - Missing/invalid dates silently become MinValue/Unix epoch.
+        // - Balance parsing failures become 0.
+        // - Status values other than "active" become Unknown but are not rejected.
+        // Complete the TODOs above and turn each bad value into an InvalidRow reason.
+        var fullName = row.Get("full_name").Trim();
+        _ = DateOnly.TryParse(row.Get("date_of_birth"), CultureInfo.InvariantCulture, DateTimeStyles.None, out var dateOfBirth);
+        _ = decimal.TryParse(row.Get("balance"), NumberStyles.Number, CultureInfo.InvariantCulture, out var balance);
+        _ = DateTimeOffset.TryParse(row.Get("updated_at"), CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var updatedAt);
+        var status = row.Get("status").Equals("active", StringComparison.OrdinalIgnoreCase) ? CustomerStatus.Active : CustomerStatus.Unknown;
+
+        if (!email.Contains('@', StringComparison.Ordinal))
+        {
+            return RowMappingResult.Invalid(new InvalidRow(row.RowNumber, "email is invalid", row.Values));
+        }
+
+        var record = new CustomerRecord(id, email, fullName, dateOfBirth, balance, status, updatedAt.ToUniversalTime(), "TODO-source-row-hash");
         return RowMappingResult.Valid(record, row.RowNumber);
-    }
-
-    private static string NormalizeId(string value) => value.Trim().ToUpperInvariant();
-    private static string NormalizeEmail(string value) => value.Trim().ToLowerInvariant();
-    private static string NormalizeName(string value) => string.Join(' ', value.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries));
-
-    private static CustomerStatus ParseStatus(string value) => value.Trim().ToLowerInvariant() switch
-    {
-        "active" or "a" or "1" => CustomerStatus.Active,
-        "inactive" or "i" or "0" => CustomerStatus.Inactive,
-        "suspended" or "s" => CustomerStatus.Suspended,
-        _ => CustomerStatus.Unknown
-    };
-
-    private static string Hash(IReadOnlyDictionary<string, string> values)
-    {
-        var canonical = string.Join('|', values.OrderBy(pair => pair.Key, StringComparer.OrdinalIgnoreCase).Select(pair => $"{pair.Key}={pair.Value.Trim()}"));
-        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonical)));
     }
 }
 

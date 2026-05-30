@@ -6,40 +6,12 @@ public sealed class CustomerDedupeService
 {
     public DedupeResult Deduplicate(IEnumerable<RowWithSource> rows)
     {
-        var kept = new Dictionary<string, RowWithSource>(StringComparer.OrdinalIgnoreCase);
-        var duplicates = new List<DuplicateRow>();
-
-        foreach (var row in rows)
-        {
-            var key = row.Record.Email;
-            if (!kept.TryGetValue(key, out var existing))
-            {
-                kept[key] = row;
-                continue;
-            }
-
-            var winner = ChooseWinner(existing, row);
-            var loser = ReferenceEquals(winner, existing) ? row : existing;
-            kept[key] = winner;
-            duplicates.Add(new DuplicateRow(key, loser.RowNumber, winner.RowNumber, "duplicate email; kept latest updated_at then highest balance"));
-        }
-
-        return new DedupeResult(
-            kept.Values.Select(value => value.Record).OrderBy(record => record.Email, StringComparer.OrdinalIgnoreCase).ToArray(),
-            duplicates.OrderBy(duplicate => duplicate.RejectedRowNumber).ToArray());
-    }
-
-    private static RowWithSource ChooseWinner(RowWithSource left, RowWithSource right)
-    {
-        var updatedAtComparison = right.Record.UpdatedAt.CompareTo(left.Record.UpdatedAt);
-        if (updatedAtComparison > 0) return right;
-        if (updatedAtComparison < 0) return left;
-
-        var balanceComparison = right.Record.Balance.CompareTo(left.Record.Balance);
-        if (balanceComparison > 0) return right;
-        if (balanceComparison < 0) return left;
-
-        return left.RowNumber <= right.RowNumber ? left : right;
+        // TODO(DEDUPE-01): Group by normalized business key, currently CustomerRecord.Email.
+        // TODO(DEDUPE-02): Choose the winner by latest UpdatedAt, then highest Balance, then lowest source row.
+        // TODO(DEDUPE-03): Emit DuplicateRow records for every rejected row.
+        // TODO(DEDUPE-04): Return accepted rows in deterministic order for testability.
+        // MOCK/WRONG ON PURPOSE: this keeps everything and reports no duplicates.
+        return new DedupeResult(rows.Select(row => row.Record).ToArray(), []);
     }
 }
 

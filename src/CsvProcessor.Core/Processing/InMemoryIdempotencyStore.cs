@@ -1,5 +1,3 @@
-using System.Collections.Concurrent;
-
 namespace CsvProcessor.Core.Processing;
 
 public interface IIdempotencyStore
@@ -10,9 +8,16 @@ public interface IIdempotencyStore
 
 public sealed class InMemoryIdempotencyStore : IIdempotencyStore
 {
-    private readonly ConcurrentDictionary<string, byte> _startedBatches = new(StringComparer.OrdinalIgnoreCase);
+    public bool TryStart(string batchId)
+    {
+        // TODO(IDEMPOTENCY-01): Store started/completed batch IDs in a thread-safe collection.
+        // TODO(IDEMPOTENCY-02): Decide how failed batches can be retried without allowing concurrent duplicates.
+        // MOCK/WRONG ON PURPOSE: every batch is accepted, including replays.
+        return true;
+    }
 
-    public bool TryStart(string batchId) => _startedBatches.TryAdd(batchId, 0);
-
-    public void Complete(string batchId) => _startedBatches[batchId] = 1;
+    public void Complete(string batchId)
+    {
+        // TODO(IDEMPOTENCY-03): Mark the batch as completed and persist that state in production.
+    }
 }

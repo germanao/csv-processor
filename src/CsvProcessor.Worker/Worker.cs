@@ -8,6 +8,8 @@ public sealed class Worker(IngestionQueue queue, CsvCustomerBatchProcessor proce
     {
         await foreach (var job in queue.ReadAllAsync(stoppingToken).ConfigureAwait(false))
         {
+            // TODO(WORKER-02): Add try/catch per job, retry policy, poison-message handling, and durable state.
+
             if (!idempotencyStore.TryStart(job.BatchId))
             {
                 logger.LogInformation("Skipping duplicate batch {BatchId}", job.BatchId);

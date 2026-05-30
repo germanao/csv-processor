@@ -17,6 +17,9 @@ public sealed class CsvCustomerBatchProcessor(
 
     public ProcessingResult Process(string csvText, DateTimeOffset? previousWatermark = null)
     {
+        // TODO(PIPELINE-01): Keep this orchestration readable: parse -> drift -> map -> dedupe -> watermark -> quality.
+        // TODO(PIPELINE-02): Decide which failures abort the whole batch and which failures quarantine one row.
+        // TODO(PIPELINE-03): Add telemetry/logging boundaries around each stage in real systems.
         var headers = csvReader.ReadHeader(csvText);
         var drift = schemaDriftDetector.Compare(ExpectedColumns, headers);
         var rawRows = csvReader.Read(csvText);

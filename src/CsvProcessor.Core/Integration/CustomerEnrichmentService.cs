@@ -16,31 +16,24 @@ public sealed class CustomerEnrichmentService(ICustomerRiskClient riskClient)
         int maxConcurrency,
         CancellationToken cancellationToken)
     {
-        ArgumentOutOfRangeException.ThrowIfLessThan(maxConcurrency, 1);
-        using var gate = new SemaphoreSlim(maxConcurrency);
-
-        var tasks = customers.Select(async customer =>
+        // TODO(ASYNC-01): Validate maxConcurrency and use SemaphoreSlim for bounded fan-out.
+        // TODO(ASYNC-02): Preserve input order while allowing concurrent requests.
+        // TODO(ASYNC-03): Let OperationCanceledException flow but convert per-customer service failures to Error.
+        // MOCK/INCOMPLETE: this is sequential and ignores maxConcurrency.
+        var enriched = new List<EnrichedCustomer<TCustomer>>();
+        foreach (var customer in customers)
         {
-            await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
             try
             {
                 var risk = await riskClient.GetRiskAsync(idSelector(customer), cancellationToken).ConfigureAwait(false);
-                return new EnrichedCustomer<TCustomer>(customer, risk, null);
+                enriched.Add(new EnrichedCustomer<TCustomer>(customer, risk, null));
             }
-            catch (OperationCanceledException)
+            catch (Exception exception) when (exception is not OperationCanceledException)
             {
-                throw;
+                enriched.Add(new EnrichedCustomer<TCustomer>(customer, null, exception.Message));
             }
-            catch (Exception exception)
-            {
-                return new EnrichedCustomer<TCustomer>(customer, null, exception.Message);
-            }
-            finally
-            {
-                gate.Release();
-            }
-        });
+        }
 
-        return await Task.WhenAll(tasks).ConfigureAwait(false);
+        return enriched;
     }
 }
