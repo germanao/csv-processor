@@ -1,0 +1,5 @@
+customer_id,email,full_name,date_of_birth,balance,status,updated_at
+ c-1 , USER@EXAMPLE.COM , Ada   Lovelace ,1815-12-10,100.50,active,2025-01-01T10:00:00Z
+c-2,bad-email,Grace Hopper,1906-12-09,99.00,active,2025-01-02T10:00:00Z
+c-3,user@example.com,Ada Byron,1815-12-10,200.00,A,2025-01-03T10:00:00Z
+c-4,,Missing Email,1990-01-01,15.20,inactive,2025-01-04T10:00:00Z

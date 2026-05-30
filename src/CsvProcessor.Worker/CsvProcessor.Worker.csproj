@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+  <ItemGroup>
+    <ProjectReference Include="..\CsvProcessor.Core\CsvProcessor.Core.csproj" />
+  </ItemGroup>
+</Project>
