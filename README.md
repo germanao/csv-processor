@@ -1,31 +1,53 @@
-# CSV Processor PoC for C#/.NET Data Challenges
+# CSV Processor Guided PoC for C#/.NET Data Challenges
 
-This repository is a learning-oriented .NET 8 / C# 12 proof of concept for common assessment tasks around CSV ingestion, low-quality data, validation, deduplication, data-quality reporting, APIs, background workers, and async integration.
+This branch intentionally contains an **incomplete learning version** of a CSV processor. It keeps the architecture and vocabulary of the full implementation, but many methods are stubs, mocks, or deliberately naive implementations with `TODO` comments.
 
-The code intentionally separates concepts into small classes so you can study or copy individual patterns during timed practice.
+Use this repository as a reconstruction exercise: read the tests, run the sample inputs, follow the comments, and complete each concept one at a time until the project behaves like a production-ready CSV ingestion pipeline.
 
+## Learning objective
 
-## Branch note
+By completing the TODOs, you should be able to explain and implement common .NET data-processing concepts:
 
-This full implementation is prepared on the `full-version` branch. Git branch names cannot contain spaces, so `full-version` is the Git-compatible branch name for the requested “full version” branch.
+- CSV parsing, including quoted values and escaped quotes.
+- Header normalization and schema drift detection.
+- Row normalization, validation, and quarantine of bad records.
+- Deterministic deduplication by business key.
+- Data-quality summaries and invalid-reason metrics.
+- Watermark-based incremental processing.
+- Idempotency guards for batch processing.
+- Minimal API ingestion endpoints.
+- Background workers, channels, cancellation, and bounded async fan-out.
+
+## Important branch note
+
+This branch is a **PoC / guide branch**, not the complete implementation. Some code is intentionally wrong or incomplete. The tests are left as executable requirements so you can use failing assertions as a study checklist.
 
 ## Project structure
 
-| Path | Purpose | Assessment topic |
+| Path | Purpose | What you should complete |
 | --- | --- | --- |
-| `src/CsvProcessor.Core` | CSV parsing, schema drift detection, row mapping, validation, dedupe, watermarking, idempotency, quality metrics, async enrichment | Single-file and library-style coding challenges |
-| `src/CsvProcessor.Console` | File input entry point that prints a JSON processing report | HackerRank-style stdin/file transformation practice |
-| `src/CsvProcessor.Api` | Minimal API endpoint for CSV ingestion | REST API, validation, error surface |
-| `src/CsvProcessor.Worker` | Bounded channel and `BackgroundService` ingestion worker | background processing, cancellation, idempotency |
-| `tests/CsvProcessor.Tests` | xUnit examples for invalid rows, duplicates, and schema drift | automated test scoring |
-| `samples/messy-customers.csv` | Small dirty input file to practice with | data-quality scenarios |
-| `docs/preparation-bank.md` | Study guide and practice bank based on your prompt | interview preparation |
+| `src/CsvProcessor.Core/Csv` | CSV parsing | Replace the naive comma splitter with a parser that understands quoted fields and record boundaries. |
+| `src/CsvProcessor.Core/Validation` | Schema drift and row mapping | Implement normalization, required fields, type parsing, status mapping, and rename hints. |
+| `src/CsvProcessor.Core/Processing` | Batch orchestration, dedupe, watermarking, idempotency | Implement the real processing order, deterministic duplicate winner rules, watermark filtering, and replay protection. |
+| `src/CsvProcessor.Core/Quality` | Data-quality metrics | Count accepted, invalid, duplicate, blank, and invalid-reason metrics correctly. |
+| `src/CsvProcessor.Console` | File input entry point | Add argument validation, error handling, and useful exit codes. |
+| `src/CsvProcessor.Api` | Minimal API endpoint | Add request validation, problem details, cancellation, and service registration patterns. |
+| `src/CsvProcessor.Worker` | Background ingestion worker | Add retry/error handling, idempotency semantics, graceful cancellation, and persistence boundaries. |
+| `tests/CsvProcessor.Tests` | xUnit requirements | Treat these tests as the first acceptance criteria to make pass. |
+| `samples/messy-customers.csv` | Dirty input sample | Use this to test normalization and quarantine behavior. |
+| `docs/preparation-bank.md` | Study guide | Use the practice bank to rebuild features from scratch. |
 
-## Requirements
+## Suggested exercise flow
 
-Use .NET 8 and C# 12. The project is pinned through `Directory.Build.props` with nullable references, implicit usings, latest analysis, and warnings as errors.
+1. Run the tests and observe the failures.
+2. Complete `CsvReader` until it parses the sample file correctly.
+3. Complete `SchemaDriftDetector` before mapping rows.
+4. Complete `CustomerRowMapper` and make invalid-row quarantine deterministic.
+5. Complete `CustomerDedupeService` with the documented tie-break rule.
+6. Complete `WatermarkProcessor` and `DataQualityService`.
+7. Wire API/worker edge cases after the core library is reliable.
 
-## Run locally
+## Commands
 
 ```bash
 dotnet restore
@@ -33,42 +55,26 @@ dotnet test
 dotnet run --project src/CsvProcessor.Console -- samples/messy-customers.csv
 ```
 
-Start the API:
+## Core CSV challenge flow to rebuild
 
-```bash
-dotnet run --project src/CsvProcessor.Api
-curl -X POST http://localhost:5000/ingestions/customers --data-binary @samples/messy-customers.csv
+```text
+CSV text
+  -> read header and rows
+  -> detect schema drift
+  -> normalize and validate rows
+  -> quarantine invalid rows
+  -> deduplicate valid rows by email
+  -> filter by previous watermark
+  -> calculate next watermark
+  -> return accepted records, invalid rows, duplicate report, and quality summary
 ```
 
-## Core CSV challenge flow
+## Completion rule of thumb
 
-1. Read headers and data rows with a lightweight CSV reader that supports quoted fields.
-2. Normalize headers and raw values.
-3. Detect schema drift before mapping data.
-4. Map raw rows into canonical `CustomerRecord` values.
-5. Quarantine invalid rows instead of failing the whole batch.
-6. Deduplicate by business key (`email`) using latest `updated_at`, then highest balance, then lowest source row.
-7. Apply an optional watermark for incremental processing.
-8. Return accepted records, invalid rows, duplicate report, quality metrics, and next watermark.
+A feature is not finished until you can answer these questions:
 
-## Practice prompts implemented in code
-
-- C1: Normalize messy legacy CSV rows into canonical DTOs.
-- C4: Deduplicate by business key and latest timestamp.
-- C5: Compute data-quality summary per batch.
-- C6: Detect missing and unexpected columns.
-- C7: Continue processing valid rows while quarantining invalid rows.
-- C8: Watermark-based incremental processing.
-- C9: In-memory idempotency guard.
-- C10: Bounded async fan-out enrichment.
-- C11: Background worker with bounded queue and graceful cancellation.
-- C13: POST endpoint for ingestion.
-
-## Tips for timed assessments
-
-- Write the expected input and output shape first.
-- Normalize values before validation, but preserve source rows for error reporting.
-- Always define the dedupe tie-break rule explicitly.
-- Prefer deterministic ordering in outputs and tests.
-- For partial-success tasks, return both accepted data and rejected-row details.
-- For async tasks, propagate `CancellationToken` and set a clear concurrency limit.
+- What invalid input does this code reject?
+- What valid-but-messy input does it normalize?
+- Is the output deterministic?
+- Does it preserve enough source context for debugging?
+- Does it behave safely when the same batch is submitted twice?

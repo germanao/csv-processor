@@ -6,6 +6,8 @@ public sealed record IngestionJob(string BatchId, string CsvText);
 
 public sealed class IngestionQueue
 {
+    // TODO(WORKER-01): Make capacity configurable and expose backpressure metrics.
+
     private readonly Channel<IngestionJob> _channel = Channel.CreateBounded<IngestionJob>(new BoundedChannelOptions(100)
     {
         FullMode = BoundedChannelFullMode.Wait,

@@ -10,16 +10,16 @@ public sealed class DataQualityService
         IReadOnlyList<InvalidRow> invalidRows,
         IReadOnlyList<DuplicateRow> duplicateRows)
     {
-        var invalidReasonCounts = invalidRows
-            .SelectMany(row => row.Reason.Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
-            .GroupBy(reason => reason, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(group => group.Key, group => group.Count(), StringComparer.OrdinalIgnoreCase);
-
-        var blankColumnCounts = rawRows
-            .SelectMany(row => row.Values.Where(pair => string.IsNullOrWhiteSpace(pair.Value)).Select(pair => pair.Key))
-            .GroupBy(column => column, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(group => group.Key, group => group.Count(), StringComparer.OrdinalIgnoreCase);
-
-        return new DataQualitySummary(rawRows.Count, accepted.Count, invalidRows.Count, duplicateRows.Count, invalidReasonCounts, blankColumnCounts);
+        // TODO(QUALITY-01): Split semicolon-delimited invalid reasons and count each reason case-insensitively.
+        // TODO(QUALITY-02): Count null/blank values per source column.
+        // TODO(QUALITY-03): Decide whether accepted count is before or after watermark filtering and document it.
+        // MOCK/INCOMPLETE: top-level counts are real, but metric dictionaries are empty.
+        return new DataQualitySummary(
+            rawRows.Count,
+            accepted.Count,
+            invalidRows.Count,
+            duplicateRows.Count,
+            new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
+            new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase));
     }
 }
