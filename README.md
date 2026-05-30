@@ -4,6 +4,11 @@ This repository is a learning-oriented .NET 8 / C# 12 proof of concept for commo
 
 The code intentionally separates concepts into small classes so you can study or copy individual patterns during timed practice.
 
+
+## Branch note
+
+This full implementation is prepared on the `full-version` branch. Git branch names cannot contain spaces, so `full-version` is the Git-compatible branch name for the requested “full version” branch.
+
 ## Project structure
 
 | Path | Purpose | Assessment topic |
